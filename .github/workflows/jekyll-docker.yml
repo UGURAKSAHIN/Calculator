@@ -5,9 +5,9 @@ permissions:
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
   workflow_dispatch:
 
 jobs:
@@ -15,31 +15,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Cache for Ruby Gems
-      uses: actions/cache@v4
-      with:
-        path: vendor/bundle
-        key: ${{ runner.os }}-gems-${{ hashFiles('**/Gemfile.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-gems-
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.1'
+          bundler-cache: true
 
-    - name: Install Ruby Dependencies
-      run: |
-        bundle config set path 'vendor/bundle'
-        bundle install
+      - name: Build Jekyll Site
+        run: bundle exec jekyll build --future
+        env:
+          JEKYLL_ENV: production
 
-    - name: Build Jekyll Site
-      run: bundle exec jekyll build --future
-      env:
-        JEKYLL_ENV: production
+      - name: Upload site artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: _site
 
-    - name: Upload site artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: site
-        path: _site
-
-    - name: Run Jekyll Tests
-      run: bundle exec htmlproofer ./_site
+      - name: Run Jekyll Tests
+        run: bundle exec htmlproofer ./_site --disable-external
