@@ -1,4 +1,5 @@
 name: Jekyll site CI
+
 permissions:
   contents: read
 
@@ -7,16 +8,38 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
-    - name: Build the site in the jekyll/builder container
+
+    - name: Set up Cache for Ruby Gems
+      uses: actions/cache@v3
+      with:
+        path: vendor/bundle
+        key: ${{ runner.os }}-gems-${{ hashFiles('**/Gemfile.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-gems-
+
+    - name: Install Ruby Dependencies
       run: |
-        docker run \
-        -v ${{ github.workspace }}:/srv/jekyll -v ${{ github.workspace }}/_site:/srv/jekyll/_site \
-        jekyll/builder:latest /bin/bash -c "chmod -R 777 /srv/jekyll && jekyll build --future"
+        bundle config set path 'vendor/bundle'
+        bundle install
+
+    - name: Build Jekyll Site
+      run: bundle exec jekyll build --future
+      env:
+        JEKYLL_ENV: production
+
+    - name: Upload site artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: site
+        path: _site
+
+    - name: Run Jekyll Tests
+      run: bundle exec htmlproofer ./_site
